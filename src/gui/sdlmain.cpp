@@ -1158,6 +1158,89 @@ void Windows_GetWindowDPI(ScreenSizeInfo &info) {
 }
 #endif
 
+/* ------------- Obtain a cursor commensurate with the display -------------- */
+
+void cur_putbit( Uint8* data, int pitch, int x, int y )
+{   Uint8 *row, *byte;
+    
+    row   = data + pitch * y;
+    byte  = row  + x / 8;
+    *byte = *byte | (1 << ( 7-(x % 8) ));
+}
+
+void cur_row( Uint8* data, Uint8* mask, int pitch, int y, int w )
+{   int x;
+    cur_putbit( data, pitch, 0, y );
+    cur_putbit( mask, pitch, 0, y );
+
+    cur_putbit( data, pitch, w, y );
+    cur_putbit( mask, pitch, w, y );
+
+    for( x = 1; x < w; x += 1 )
+    {   cur_putbit( mask, pitch, x, y );  }
+}
+
+void cur_set()
+{   SDL_Cursor  *cur;
+    int         scale;                    // cursor scale;
+    int         width, height;            // cursor dimensions;
+    int         disp_w, disp_h, disp_min; // display dimensions;
+    int         dpi_int;                  // integer DPI
+    int         x, y;
+    int         bufsize;
+    Uint8      *data, *mask;              // cursor bitmaps
+    int         bitmap_w;                 // bitmap width in bytes
+
+    dpi_int = (int)screen_size_info.screen_dpi.height; 
+    dpi_int = 100;
+    if( dpi_int != -1.0 ) // if DPI is available:
+    {   scale = dpi_int / 14;
+        LOG_MSG("CURSOR: scale: %i from DPI = %i", scale, dpi_int );
+    }
+    else // if DPI is unavaialbe, use display size:
+    {   disp_w = screen_size_info.screen_dimensions_pixels.width;
+        disp_h = screen_size_info.screen_dimensions_pixels.height;
+        if( disp_w < disp_h ) disp_min = disp_w; // unlikely, but possible
+        else                  disp_min = disp_h;
+        scale = disp_min / 171;
+        LOG_MSG("CURSOR: scale: %i from display minimal display dimension: %i", scale, disp_min );
+    }
+    if( scale <  5 ) scale =  5; // minimum useful size
+    if( scale > 10 ) scale = 10; // maximum size that works in SDL 1 on WinXP
+    LOG_MSG("CURSOR: clipped, final, scale: %i", scale );
+    // TODO: check wheither other environments support larger cursors.
+
+    // Calculate cursor dimensions from scale:
+    height   = scale * 3;
+    width    = scale * 2;
+    bitmap_w = width / 8;
+    if( bitmap_w * 8 != width ) bitmap_w += 1;
+
+    // Initialize cursor bitmaps:
+    bufsize = bitmap_w * height;
+    data    = (Uint8*)malloc( bufsize ); memset( data, 0, bufsize );
+    mask    = (Uint8*)malloc( bufsize ); memset( mask, 0, bufsize );
+
+    // Draw the cursor:
+    for( y = 0; y < width; y += 1 )
+    {   cur_row( data, mask, bitmap_w, y, y );  }
+
+    for( y = width; y < height; y += 1 )
+    {   cur_row( data, mask, bitmap_w, y, height-y );  }
+
+    for( x = height-width; x < width; x += 1 )
+    {   cur_putbit( data, bitmap_w, x, width );
+        cur_putbit( mask, bitmap_w, x, width );
+    }
+
+    LOG_MSG( "CURSOR: Creating cursor with a bitmap of %i x %i.", bitmap_w * 8, height );
+    cur = SDL_CreateCursor(data, mask, bitmap_w * 8, height, 0, 0);
+    SDL_SetCursor( cur );
+    // TODO: Invoke SDL_FreeCursor( cur ) to avoid memory leak.
+    free( data ); free( mask );
+}
+
+
 void UpdateWindowDimensions(void)
 {
 #if defined(C_SDL2)
@@ -1190,6 +1273,7 @@ void UpdateWindowDimensions(void)
     Linux_GetWindowDPI(/*&*/screen_size_info);
 #endif
     PrintScreenSizeInfo();
+    cur_set();
 }
 
 #define MAPPERFILE              "mapper-dosbox-x.map"
@@ -11288,6 +11372,7 @@ bool custom_bios = false;
 void DISP2_Init(uint8_t color);
 //extern void UI_Init(void);
 void grGlideShutdown(void);
+
 int main(int argc, char* argv[]) SDL_MAIN_NOEXCEPT {
     CommandLine com_line(argc,argv);
     Config myconf(&com_line);
@@ -11936,8 +12021,9 @@ int main(int argc, char* argv[]) SDL_MAIN_NOEXCEPT {
 #endif
 
         /* -- SDL init */
-        if (SDL_Init(SDL_INIT_AUDIO|SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_NOPARACHUTE) >= 0)
+        if (SDL_Init(SDL_INIT_AUDIO|SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_NOPARACHUTE) >= 0) {
             sdl.inited = true;
+        }
         else
             E_Exit("Can't init SDL %s",SDL_GetError());
 
