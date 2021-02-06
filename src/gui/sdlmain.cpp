@@ -1162,7 +1162,8 @@ void Windows_GetWindowDPI(ScreenSizeInfo &info) {
 
 /* ------------- Obtain a cursor commensurate with the display -------------- */
 
-void cur_putbit( Uint8* data, int pitch, int x, int y )
+/* Set a bit on a cursor bitmap */
+void cur_setbit( Uint8* data, int pitch, int x, int y )
 {   Uint8 *row, *byte;
     
     row   = data + pitch * y;
@@ -1172,14 +1173,14 @@ void cur_putbit( Uint8* data, int pitch, int x, int y )
 
 void cur_row( Uint8* data, Uint8* mask, int pitch, int y, int w )
 {   int x;
-    cur_putbit( data, pitch, 0, y );
-    cur_putbit( mask, pitch, 0, y );
+    cur_setbit( data, pitch, 0, y );
+    cur_setbit( mask, pitch, 0, y );
 
-    cur_putbit( data, pitch, w, y );
-    cur_putbit( mask, pitch, w, y );
+    cur_setbit( data, pitch, w, y );
+    cur_setbit( mask, pitch, w, y );
 
     for( x = 1; x < w; x += 1 )
-    {   cur_putbit( mask, pitch, x, y );  }
+    {   cur_setbit( mask, pitch, x, y );  }
 }
 
 void cur_set()
@@ -1194,7 +1195,6 @@ void cur_set()
     int         bitmap_w;                 // bitmap width in bytes
 
     dpi_int = (int)screen_size_info.screen_dpi.height; 
-    dpi_int = 100;
     if( dpi_int != -1.0 ) // if DPI is available:
     {   scale = dpi_int / 14;
         LOG_MSG("CURSOR: scale: %i from DPI = %i", scale, dpi_int );
@@ -1224,21 +1224,25 @@ void cur_set()
     mask    = (Uint8*)malloc( bufsize ); memset( mask, 0, bufsize );
 
     // Draw the cursor:
+    // 1. draw the arrow point:
     for( y = 0; y < width; y += 1 )
     {   cur_row( data, mask, bitmap_w, y, y );  }
 
+    // 2. draw the lower part of the arrow:
     for( y = width; y < height; y += 1 )
     {   cur_row( data, mask, bitmap_w, y, height-y );  }
 
+    // 3. draw right size of the notch:
     for( x = height-width; x < width; x += 1 )
-    {   cur_putbit( data, bitmap_w, x, width );
-        cur_putbit( mask, bitmap_w, x, width );
+    {   cur_setbit( data, bitmap_w, x, width );
+        cur_setbit( mask, bitmap_w, x, width );
     }
 
     LOG_MSG( "CURSOR: Creating cursor with a bitmap of %i x %i.", bitmap_w * 8, height );
     cur = SDL_CreateCursor(data, mask, bitmap_w * 8, height, 0, 0);
     SDL_SetCursor( cur );
-    // TODO: Invoke SDL_FreeCursor( cur ) to avoid memory leak.
+    // TODO: Invoke SDL_FreeCursor( cur ) at exit to avoid memory leak.
+    //       (if SDL_Quit() fails to do it)
     free( data ); free( mask );
 }
 
