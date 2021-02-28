@@ -35,6 +35,7 @@
 #include "menu.h"
 #include "render.h"
 #include "../ints/int10.h"
+#include "../libs/display/display.h"
 #if defined(WIN32)
 #include "windows.h"
 extern RECT monrect;
@@ -960,24 +961,24 @@ void CONFIG::Run(void) {
 #elif defined(WIN32)
                         } else if (!strcasecmp(pvars[0].c_str(), "clientwidth")) {
                             RECT rect;
-                            GetClientRect(GetHWND(), &rect);
+                            GetClientRect(xd_win_hwnd(), &rect);
                             WriteOut("%d\n",rect.right-rect.left);
                             first_shell->SetEnv("CONFIG",std::to_string(rect.right-rect.left).c_str());
                         } else if (!strcasecmp(pvars[0].c_str(), "clientheight")) {
                             RECT rect;
-                            GetClientRect(GetHWND(), &rect);
+                            GetClientRect(xd_win_hwnd(), &rect);
                             WriteOut("%d\n",rect.bottom-rect.top);
                             first_shell->SetEnv("CONFIG",std::to_string(rect.bottom-rect.top).c_str());
 #endif
 #if defined(WIN32)
                         } else if (!strcasecmp(pvars[0].c_str(), "windowwidth")) {
                             RECT rect;
-                            GetWindowRect(GetHWND(), &rect);
+                            GetWindowRect(xd_win_hwnd(), &rect);
                             WriteOut("%d\n",rect.right-rect.left);
                             first_shell->SetEnv("CONFIG",std::to_string(rect.right-rect.left).c_str());
                         } else if (!strcasecmp(pvars[0].c_str(), "windowheight")) {
                             RECT rect;
-                            GetWindowRect(GetHWND(), &rect);
+                            GetWindowRect(xd_win_hwnd(), &rect);
                             WriteOut("%d\n",rect.bottom-rect.top);
                             first_shell->SetEnv("CONFIG",std::to_string(rect.bottom-rect.top).c_str());
 #endif
@@ -1277,7 +1278,7 @@ void CONFIG::Run(void) {
 #elif defined(WIN32)
                                 RECT rect;
                                 MONITORINFO info;
-                                GetWindowRect(GetHWND(), &rect);
+                                GetWindowRect(xd_win_hwnd(), &rect);
 #if !defined(HX_DOS)
                                 if (GetDisplayNumber()>0) {
                                     xyp xy={0};
@@ -1302,7 +1303,7 @@ void CONFIG::Run(void) {
                                     posx = (GetSystemMetrics(SM_CXSCREEN)-(rect.right-rect.left))/2;
                                     posy = (GetSystemMetrics(SM_CYSCREEN)-(rect.bottom-rect.top))/2;
                                 }
-                                MoveWindow(GetHWND(), posx, posy, rect.right-rect.left, rect.bottom-rect.top, true);
+                                MoveWindow(xd_win_hwnd(), posx, posy, rect.right-rect.left, rect.bottom-rect.top, true);
 #endif
                             }
 

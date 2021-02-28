@@ -30,6 +30,7 @@
 #include "timer.h"
 #include "inout.h"
 #include "shell.h"
+#include "../libs/display/display.h"
 
 #if DOSBOXMENU_TYPE == DOSBOXMENU_SDLDRAW
 unsigned int min_sdldraw_menu_width = 500;
@@ -1764,30 +1765,6 @@ void DOSBox_CheckOS(int &id, int &major, int &minor) {
 }
 #endif
 
-#if defined(WIN32)
-# if defined(HX_DOS) || !defined(C_SDL2)
-HWND GetHWND(void) {
-    SDL_SysWMinfo wmi;
-    SDL_VERSION(&wmi.version);
-
-    if(!SDL_GetWMInfo(&wmi)) {
-        return NULL;
-    }
-    return wmi.window;
-}
-
-HWND GetSurfaceHWND(void) {
-    SDL_SysWMinfo wmi;
-    SDL_VERSION(&wmi.version);
-
-    if (!SDL_GetWMInfo(&wmi)) {
-        return NULL;
-    }
-    return wmi.child_window;
-}
-# endif
-#endif
-
 void MSG_WM_COMMAND_handle(SDL_SysWMmsg &Message) {
 #if defined(WIN32) && !defined(HX_DOS)
     bool GFX_GetPreventFullscreen(void);
@@ -1836,7 +1813,7 @@ void MSG_WM_COMMAND_handle(SDL_SysWMmsg &Message) {
     }
     std::string fullScreenString = std::string("desktop.fullscreen");
     if (!menu.gui || GetSetSDLValue(1, fullScreenString, 0)) return;
-    if (!GetMenu(GetHWND())) return;
+    if (!GetMenu(xd_win_hwnd())) return;
 #if DOSBOXMENU_TYPE == DOSBOXMENU_HMENU
     if (mainMenu.mainMenuWM_COMMAND((unsigned int)LOWORD(wParam))) return;
 #endif
@@ -1848,8 +1825,8 @@ void DOSBox_SetSysMenu(void) {
     MENUITEMINFO mii;
     HMENU sysmenu;
 
-    sysmenu = GetSystemMenu(GetHWND(), TRUE); // revert, so we can reapply menu items
-    sysmenu = GetSystemMenu(GetHWND(), FALSE);
+    sysmenu = GetSystemMenu(xd_win_hwnd(), TRUE); // revert, so we can reapply menu items
+    sysmenu = GetSystemMenu(xd_win_hwnd(), FALSE);
     if (sysmenu == NULL) return;
 
     AppendMenu(sysmenu, MF_SEPARATOR, -1, "");
@@ -2155,8 +2132,8 @@ void DOSBox_RefreshMenu(void) {
 
     if(fullscreen) {
         NonUserResizeCounter=1;
-        SetMenu(GetHWND(), NULL);
-        DrawMenuBar(GetHWND());
+        SetMenu(xd_win_hwnd(), NULL);
+        DrawMenuBar(xd_win_hwnd());
         return;
     }
     if(menu.toggle)

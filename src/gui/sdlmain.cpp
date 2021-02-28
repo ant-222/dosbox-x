@@ -26,6 +26,8 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
+#include "../libs/display/display.h"
+
 #ifdef WIN32
 # ifndef WIN32_LEAN_AND_MEAN
 #  define WIN32_LEAN_AND_MEAN
@@ -855,21 +857,21 @@ void WindowsTaskbarUpdatePreviewRegion(void) {
                 behavior where the "client area" is the area below the menu bar and inside the frame,
                 ITaskbarList3's idea of the "client area" is the the area inside the frame INCLUDING
                 the menu bar. Why? */
-        if (GetMenu(GetHWND()) != NULL) {
+        if (GetMenu(xd_win_hwnd()) != NULL) {
             MENUBARINFO mb;
             int rh;
 
             memset(&mb, 0, sizeof(mb));
             mb.cbSize = sizeof(mb);
 
-            GetMenuBarInfo(GetHWND(), OBJID_MENU, 0, &mb); // returns absolute screen coordinates, apparently.
+            GetMenuBarInfo(xd_win_hwnd(), OBJID_MENU, 0, &mb); // returns absolute screen coordinates, apparently.
             rh = mb.rcBar.bottom + 1 - mb.rcBar.top; // menu screen space is top <= y <= bottom, inclusive.
 
             r.top += rh;
             r.bottom += rh;
         }
 
-        if (winTaskbarList->SetThumbnailClip(GetHWND(), &r) != S_OK)
+        if (winTaskbarList->SetThumbnailClip(xd_win_hwnd(), &r) != S_OK)
             LOG_MSG("WARNING: ITaskbarList3::SetThumbnailClip() failed");
     }
 }
@@ -879,27 +881,27 @@ void WindowsTaskbarResetPreviewRegion(void) {
         /* Windows 7/8/10: Tell the taskbar which part of our window contains the client area (not including the menu bar) */
         RECT r;
 
-        GetClientRect(GetHWND(), &r);
+        GetClientRect(xd_win_hwnd(), &r);
 
         /* NTS: The MSDN documentation is misleading. Apparently, despite 30+ years of Windows SDK
                 behavior where the "client area" is the area below the menu bar and inside the frame,
                 ITaskbarList3's idea of the "client area" is the the area inside the frame INCLUDING
                 the menu bar. Why? */
-        if (GetMenu(GetHWND()) != NULL) {
+        if (GetMenu(xd_win_hwnd()) != NULL) {
             MENUBARINFO mb;
             int rh;
 
             memset(&mb, 0, sizeof(mb));
             mb.cbSize = sizeof(mb);
 
-            GetMenuBarInfo(GetHWND(), OBJID_MENU, 0, &mb); // returns absolute screen coordinates, apparently.
+            GetMenuBarInfo(xd_win_hwnd(), OBJID_MENU, 0, &mb); // returns absolute screen coordinates, apparently.
             rh = mb.rcBar.bottom + 1 - mb.rcBar.top; // menu screen space is top <= y <= bottom, inclusive.
 
             r.top += rh;
             r.bottom += rh;
         }
 
-        if (winTaskbarList->SetThumbnailClip(GetHWND(), &r) != S_OK)
+        if (winTaskbarList->SetThumbnailClip(xd_win_hwnd(), &r) != S_OK)
             LOG_MSG("WARNING: ITaskbarList3::SetThumbnailClip() failed");
     }
 }
@@ -1106,59 +1108,6 @@ void PrintScreenSizeInfo(void) {
 #endif
 }
 
-#if defined(WIN32)
-void Windows_GetWindowDPI(ScreenSizeInfo &info) {
-    info.clear();
-
-# if !defined(HX_DOS)
-    HMONITOR mon;
-    HWND hwnd;
-
-    info.method = METHOD_WIN98BASE;
-
-    hwnd = GetHWND();
-    if (hwnd == NULL) return;
-
-    mon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
-    if (mon == NULL) mon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTOPRIMARY);
-    if (mon == NULL) return;
-
-    MONITORINFO mi;
-    memset(&mi,0,sizeof(mi));
-    mi.cbSize = sizeof(mi);
-    if (!GetMonitorInfo(mon,&mi)) return;
-
-    info.screen_position_pixels.x        = mi.rcMonitor.left;
-    info.screen_position_pixels.y        = mi.rcMonitor.top;
-
-    info.screen_dimensions_pixels.width  = mi.rcMonitor.right - mi.rcMonitor.left;
-    info.screen_dimensions_pixels.height = mi.rcMonitor.bottom - mi.rcMonitor.top;
-
-    /* Windows 10 build 1607 and later offer a "Get DPI of window" function */
-    {
-        HMODULE __user32;
-
-        __user32 = GetModuleHandle("USER32.DLL");
-        if (__user32) {
-            UINT (WINAPI *__GetDpiForWindow)(HWND) = NULL;
-
-            __GetDpiForWindow = (UINT (WINAPI *)(HWND))GetProcAddress(__user32,"GetDpiForWindow");
-            if (__GetDpiForWindow) {
-                UINT dpi = __GetDpiForWindow(hwnd);
-
-                if (dpi != 0) {
-                    info.screen_dpi.width = dpi;
-                    info.screen_dpi.height = dpi;
-
-                    info.screen_dimensions_mm.width = (25.4 * screen_size_info.screen_dimensions_pixels.width) / dpi;
-                    info.screen_dimensions_mm.height = (25.4 * screen_size_info.screen_dimensions_pixels.height) / dpi;
-                }
-            }
-        }
-    }
-# endif
-}
-#endif
 
 /* ------------- Obtain a cursor commensurate with the display -------------- */
 
@@ -1194,6 +1143,9 @@ void cur_set()
     Uint8      *data, *mask;              // cursor bitmaps
     int         bitmap_w;                 // bitmap width in bytes
 
+    xd_res( &x, &y );
+    LOG_MSG("CURSOR: display: %i x %i dpi: %i", x, y, xd_dpi());
+
     dpi_int = (int)screen_size_info.screen_dpi.height; 
     if( dpi_int != -1.0 ) // if DPI is available:
     {   scale = dpi_int / 14;
@@ -1211,6 +1163,7 @@ void cur_set()
     if( scale > 10 ) scale = 10; // maximum size that works in SDL 1 on WinXP
     LOG_MSG("CURSOR: clipped, final, scale: %i", scale );
     // TODO: check wheither other environments support larger cursors.
+    scale = 10;
 
     // Calculate cursor dimensions from scale:
     height   = scale * 3;
@@ -1240,7 +1193,10 @@ void cur_set()
 
     LOG_MSG( "CURSOR: Creating cursor with a bitmap of %i x %i.", bitmap_w * 8, height );
     cur = SDL_CreateCursor(data, mask, bitmap_w * 8, height, 0, 0);
+    if( cur != NULL ) LOG_MSG( "CURSOR: Cursor created.");
+    else              LOG_MSG( "CURSOR: Failed to create cursor.");
     SDL_SetCursor( cur );
+    LOG_MSG( "CURSOR: set." );
     // TODO: Invoke SDL_FreeCursor( cur ) at exit to avoid memory leak.
     //       (if SDL_Quit() fails to do it)
     free( data ); free( mask );
@@ -1262,15 +1218,13 @@ void UpdateWindowDimensions(void)
     MacOSX_GetWindowDPI(/*&*/screen_size_info);
 #endif
 #if defined(WIN32)
-    // When maximized, SDL won't actually tell us our new dimensions, so get it ourselves.
-    // FIXME: Instead of GetHWND() we need to track our own handle or add something to SDL 1.x
-    //        to provide the handle!
-    RECT r = { 0 };
-
-    GetClientRect(GetHWND(), &r);
-    UpdateWindowDimensions(r.right, r.bottom);
-    UpdateWindowMaximized(IsZoomed(GetHWND()));
-    Windows_GetWindowDPI(/*&*/screen_size_info);
+    // TODO: this should be the general invocation for all OSes:
+    xd_screeninfo(
+        &screen_size_info,
+        &currentWindowWidth, &currentWindowHeight, &menu.maxwindow );
+    // If setting window dimensions and the maximized flag is deemed best
+    // done via functions UpdateWindowDimensions and UpdateWindowMaximized
+    // then pass pointers to this functions to xd_screeninfo() .
 #endif
 #if defined(LINUX)
     void UpdateWindowDimensions_Linux(void);
@@ -1278,8 +1232,8 @@ void UpdateWindowDimensions(void)
     void Linux_GetWindowDPI(ScreenSizeInfo &info);
     Linux_GetWindowDPI(/*&*/screen_size_info);
 #endif
+
     PrintScreenSizeInfo();
-    cur_set();
 }
 
 #define MAPPERFILE              "mapper-dosbox-x.map"
@@ -1339,25 +1293,6 @@ extern "C" void SDL1_hax_SetMenu(HMENU menu);
 # include <os2.h>
 #endif
 
-#if defined(C_SDL2)
-# if defined(WIN32)
-HWND GetHWND()
-{
-    SDL_SysWMinfo wmi;
-    SDL_VERSION(&wmi.version);
-    if (sdl.window == NULL)
-        return nullptr;
-    if (!SDL_GetWindowWMInfo(sdl.window, &wmi))
-        return nullptr;
-    return wmi.info.win.window;
-}
-
-HWND GetSurfaceHWND()
-{
-    return GetHWND();
-}
-# endif
-#endif
 void SDL_rect_cliptoscreen(SDL_Rect &r) {
     if (r.x < 0) {
         r.w += r.x;
@@ -1427,7 +1362,7 @@ void GFX_SetIcon(void)
     hIcon1 = (HICON) LoadImage( GetModuleHandle(NULL), MAKEINTRESOURCE(dosbox_ico), IMAGE_ICON,
         16,16,LR_DEFAULTSIZE);
 
-    SendMessage(GetHWND(), WM_SETICON, ICON_SMALL, (LPARAM) hIcon1 ); 
+    SendMessage(xd_win_hwnd(), WM_SETICON, ICON_SMALL, (LPARAM) hIcon1 ); 
 #endif
 }
 
@@ -2067,7 +2002,7 @@ void SDL_Prepare(void) {
     LOG(LOG_MISC,LOG_DEBUG)("Win32: Preparing main window to accept files dragged in from the Windows shell");
 
     SDL_PumpEvents();
-    DragAcceptFiles(GetHWND(), TRUE);
+    DragAcceptFiles(xd_win_hwnd(), TRUE);
     SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 #endif
 #endif
@@ -2715,7 +2650,7 @@ static Bitu OUTPUT_TTF_SetSize() {
             MONITORINFO info;
             info.cbSize = sizeof(MONITORINFO);
             GetMonitorInfo(monitor, &info);
-            MoveWindow(GetHWND(), info.rcMonitor.left, info.rcMonitor.top, info.rcMonitor.right-info.rcMonitor.left, info.rcMonitor.bottom-info.rcMonitor.top, true);
+            MoveWindow(xd_win_gethwnd(), info.rcMonitor.left, info.rcMonitor.top, info.rcMonitor.right-info.rcMonitor.left, info.rcMonitor.bottom-info.rcMonitor.top, true);
         }
 #endif
 #endif
@@ -2888,7 +2823,7 @@ extern "C" void SDL_DOSBox_X_Hack_Set_Toggle_Key_WM_USER_Hack(unsigned char x);
 
 static LRESULT CALLBACK WinExtHookKeyboardHookProc(int nCode,WPARAM wParam,LPARAM lParam) {
     if (nCode == HC_ACTION) {
-        HWND myHwnd = GetHWND();
+        HWND myHwnd = xd_win_hwnd();
 
         if (exthook_enabled && GetFocus() == myHwnd) { /* intercept only if DOSBox-X is the focus and the keyboard is hooked */
             if (wParam == WM_SYSKEYDOWN || wParam == WM_KEYDOWN || wParam == WM_SYSKEYUP || wParam == WM_KEYUP) {
@@ -3219,7 +3154,7 @@ void CaptureMouseNotifyWin32(bool lck)
 # if !defined(HX_DOS)
         const auto cnt = lck ? 4 : 2;
         const auto tim = lck ? 80 : 40;
-        const auto wnd = GetHWND();
+        const auto wnd = xd_win_hwnd();
         if (wnd != nullptr)
         {
             FLASHWINFO fi;
@@ -3909,7 +3844,7 @@ void change_output(int output) {
         resetreq = true;
     }
 #if defined(WIN32) && !defined(HX_DOS)
-    HMENU sysmenu = GetSystemMenu(GetHWND(), TRUE);
+    HMENU sysmenu = GetSystemMenu(xd_win_gethwnd(), TRUE);
     if (sysmenu != NULL) {
         EnableMenuItem(sysmenu, ID_WIN_SYSMENU_TTFINCSIZE, MF_BYCOMMAND|(TTF_using()?MF_ENABLED:MF_DISABLED));
         EnableMenuItem(sysmenu, ID_WIN_SYSMENU_TTFDECSIZE, MF_BYCOMMAND|(TTF_using()?MF_ENABLED:MF_DISABLED));
@@ -5077,6 +5012,7 @@ std::string GetDefaultOutput() {
 static void GUI_StartUp() {
     DOSBoxMenu::item *item;
 
+    cur_set();
     if (has_GUI_StartUp) return;
     has_GUI_StartUp = true;
 
@@ -7043,7 +6979,7 @@ void GFX_EventsMouseWin32()
     if (!GetCursorPos(&point))
         return;
 
-    const auto hwnd = GetSurfaceHWND();
+    const auto hwnd = xd_win_surfwnd();
 
     if (hwnd == nullptr || !ScreenToClient(hwnd, &point))
         return;
@@ -9960,7 +9896,7 @@ bool vid_select_pixel_shader_menu_callback(DOSBoxMenu* const menu, DOSBoxMenu::i
 
     memset(&ofn, 0, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = GetHWND();
+    ofn.hwndOwner = xd_win_gethwnd();
     ofn.lpstrFilter =
         "D3D shaders\0"                 "*.fx\0"
         "\0"                            "\0";
@@ -10259,7 +10195,7 @@ bool toOutput(const char *what) {
         if (window_was_maximized&&!GFX_IsFullscreen()) {
             change_output(0);
 #if defined(WIN32)
-            ShowWindow(GetHWND(), SW_MAXIMIZE);
+            ShowWindow(xd_win_hwnd(), SW_MAXIMIZE);
 #endif
         } else
             change_output(0);
@@ -10271,7 +10207,7 @@ bool toOutput(const char *what) {
         if (window_was_maximized&&!GFX_IsFullscreen()) {
             change_output(3);
 #if defined(WIN32)
-            ShowWindow(GetHWND(), SW_MAXIMIZE);
+            ShowWindow(xd_win_hwnd(), SW_MAXIMIZE);
 #endif
         } else
             change_output(3);
@@ -10283,7 +10219,7 @@ bool toOutput(const char *what) {
         if (window_was_maximized&&!GFX_IsFullscreen()) {
             change_output(4);
 #if defined(WIN32)
-            ShowWindow(GetHWND(), SW_MAXIMIZE);
+            ShowWindow(xd_win_hwnd(), SW_MAXIMIZE);
 #endif
         } else
             change_output(4);
@@ -10295,7 +10231,7 @@ bool toOutput(const char *what) {
         if (window_was_maximized&&!GFX_IsFullscreen()) {
             change_output(5);
 #if defined(WIN32)
-            ShowWindow(GetHWND(), SW_MAXIMIZE);
+            ShowWindow(xd_win_hwnd(), SW_MAXIMIZE);
 #endif
         } else
             change_output(5);
@@ -10311,7 +10247,7 @@ bool toOutput(const char *what) {
         if (window_was_maximized&&!GFX_IsFullscreen()) {
             change_output(6);
 #if defined(WIN32)
-            ShowWindow(GetHWND(), SW_MAXIMIZE);
+            ShowWindow(xd_win_gethwnd(), SW_MAXIMIZE);
 #endif
         } else
             change_output(6);
@@ -10328,7 +10264,7 @@ bool toOutput(const char *what) {
 #endif
         if (window_was_maximized&&!GFX_IsFullscreen()) {
 #if defined(WIN32)
-            ShowWindow(GetHWND(), SW_RESTORE);
+            ShowWindow(xd_win_gethwnd(), SW_RESTORE);
 #else
             // Todo: How about Linux and macOS
 #endif
@@ -11017,7 +10953,7 @@ bool macosx_on_top = false;
 
 bool is_always_on_top(void) {
 #if defined(_WIN32) && !defined(C_SDL2)
-    DWORD dwExStyle = ::GetWindowLong(GetHWND(), GWL_EXSTYLE);
+    DWORD dwExStyle = ::GetWindowLong(xd_win_hwnd(), GWL_EXSTYLE);
     return !!(dwExStyle & WS_EX_TOPMOST);
 #elif defined(MACOSX) && !defined(C_SDL2)
     return macosx_on_top;
@@ -12306,7 +12242,6 @@ int main(int argc, char* argv[]) SDL_MAIN_NOEXCEPT {
                     char tmp1[64],tmp2[64];
 
                     sprintf(tmp1,"overscan_%zu",i);
-                    sprintf(tmp2,"%zu",i);
                     mainMenu.alloc_item(DOSBoxMenu::item_type_id,tmp1).set_text(tmp2).
                         set_callback_function(overscan_menu_callback);
                 }
@@ -13078,7 +13013,7 @@ int main(int argc, char* argv[]) SDL_MAIN_NOEXCEPT {
                     wcscpy(b.szTip, L"Pause emulation");
                 }
 
-                winTaskbarList->ThumbBarAddButtons(GetHWND(), buttoni, buttons);
+                winTaskbarList->ThumbBarAddButtons(xd_win_hwnd(), buttoni, buttons);
 #endif
             }
         }
@@ -13445,7 +13380,7 @@ fresh_boot:
 
 #if defined(WIN32) && !defined(C_SDL2) && defined(SDL_DOSBOX_X_SPECIAL)
 # if !defined(HX_DOS)
-    ShowWindow(GetHWND(), SW_HIDE);
+    ShowWindow(xd_win_hwnd(), SW_HIDE);
     SDL1_hax_SetMenu(NULL);/* detach menu from window, or else Windows will destroy the menu out from under the C++ class */
 # endif
 #endif

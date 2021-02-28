@@ -34,6 +34,7 @@
 #include "video.h"
 #include "menu.h"
 #include "SDL.h"
+#include "../libs/display/display.h"
 
 void upcase(std::string &str) {
 	int (*tf)(int) = std::toupper;
@@ -222,7 +223,7 @@ void E_Exit(const char * format,...) {
 	LOG_MSG("E_Exit: %s\n",buf);
 #if defined(WIN32)
 	/* Most Windows users DON'T run DOSBox-X from the command line! */
-	MessageBox(GetHWND(), buf, "E_Exit", MB_OK | MB_ICONEXCLAMATION);
+	MessageBox(xd_win_hwnd(), buf, "E_Exit", MB_OK | MB_ICONEXCLAMATION);
 #endif
 #if C_DEBUG
 	endwin();

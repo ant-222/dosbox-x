@@ -47,6 +47,7 @@
 #include "SDL_syswm.h"
 #include "sdlmain.h"
 #include "shell.h"
+#include "../libs/display/display.h"
 
 #if C_EMSCRIPTEN
 # include <emscripten.h>
@@ -4260,7 +4261,7 @@ void BIND_MappingEvents(void) {
             switch ( event.syswm.msg->msg ) {
                 case WM_COMMAND:
 # if DOSBOXMENU_TYPE == DOSBOXMENU_HMENU
-                    if (GetMenu(GetHWND())) {
+                    if (GetMenu(xd_win_hwnd())) {
                         if (mapperMenu.mainMenuWM_COMMAND((unsigned int)LOWORD(event.syswm.msg->wParam))) return;
                     }
 # endif
@@ -4583,7 +4584,7 @@ void MAPPER_RunInternal() {
     mapper.running = true;
 
 #if defined(__WIN32__) && !defined(C_SDL2) && !defined(C_HX_DOS)
-    if(menu.maxwindow) ShowWindow(GetHWND(), SW_RESTORE);
+    if(menu.maxwindow) ShowWindow(xd_win_hwnd(), SW_RESTORE);
 #endif
     int cursor = SDL_ShowCursor(SDL_QUERY);
     SDL_ShowCursor(SDL_ENABLE);

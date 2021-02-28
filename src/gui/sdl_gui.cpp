@@ -38,6 +38,7 @@
 #include "midi.h"
 #include "bios_disk.h"
 #include "../dos/drives.h"
+#include "../libs/display/display.h"
 
 #include <iostream>
 #include <sstream>
@@ -2515,7 +2516,7 @@ static void UI_Execute(GUI::ScreenSDL *screen) {
                     switch ( event.syswm.msg->msg ) {
                         case WM_COMMAND:
 # if DOSBOXMENU_TYPE == DOSBOXMENU_HMENU
-                            if (GetMenu(GetHWND())) {
+                            if (GetMenu(xd_win_hwnd())) {
                                 if (guiMenu.mainMenuWM_COMMAND((unsigned int)LOWORD(event.syswm.msg->wParam))) return;
                             }
 # endif
@@ -2739,7 +2740,7 @@ static void UI_Select(GUI::ScreenSDL *screen, int select) {
                     switch ( event.syswm.msg->msg ) {
                         case WM_COMMAND:
 # if DOSBOXMENU_TYPE == DOSBOXMENU_HMENU
-                            if (GetMenu(GetHWND())) {
+                            if (GetMenu(xd_win_hwnd())) {
                                 if (guiMenu.mainMenuWM_COMMAND((unsigned int)LOWORD(event.syswm.msg->wParam))) return;
                             }
 # endif

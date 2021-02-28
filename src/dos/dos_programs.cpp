@@ -54,6 +54,7 @@
 #include "render.h"
 #include "mouse.h"
 #include "../ints/int10.h"
+#include "../libs/display/display.h"
 #if !defined(HX_DOS)
 #include "../libs/tinyfiledialogs/tinyfiledialogs.c"
 #endif
@@ -342,11 +343,11 @@ void MenuMountDrive(char drive, const char drive2[DOS_PATHLENGTH]) {
 	std::string drive_warn;
 	if (Drives[drive-'A']) {
 		drive_warn="Drive "+str+": is already mounted. Unmount it first, and then try again.";
-		MessageBox(GetHWND(),drive_warn.c_str(),"Error",MB_OK);
+		MessageBox(xd_win_hwnd(),drive_warn.c_str(),"Error",MB_OK);
 		return;
 	}
 	if(control->SecureMode()) {
-		MessageBox(GetHWND(),MSG_Get("PROGRAM_CONFIG_SECURE_DISALLOW"),"Error",MB_OK);
+		MessageBox(xd_win_hwnd(),MSG_Get("PROGRAM_CONFIG_SECURE_DISALLOW"),"Error",MB_OK);
 		return;
 	}
 	DOS_Drive * newdrive;
@@ -357,7 +358,7 @@ void MenuMountDrive(char drive, const char drive2[DOS_PATHLENGTH]) {
 	drive_warn="Do you really want to give DOSBox-X access to";
 	int type=GetDriveType(drive2);
 	if(type==DRIVE_NO_ROOT_DIR) {
-		MessageBox(GetHWND(),("Drive "+str+": does not exist in the system.").c_str(),"Error",MB_OK);
+		MessageBox(xd_win_hwnd(),("Drive "+str+": does not exist in the system.").c_str(),"Error",MB_OK);
 		return;
 	} else if(type==DRIVE_CDROM)
 		drive_warn += " your real CD-ROM drive ";
@@ -368,7 +369,7 @@ void MenuMountDrive(char drive, const char drive2[DOS_PATHLENGTH]) {
 	else
 		drive_warn += " everything on your real drive ";
 
-	if (mountwarning && MessageBox(GetHWND(),(drive_warn+str+"?").c_str(),"Warning",MB_YESNO)==IDNO) return;
+	if (mountwarning && MessageBox(xd_win_hwnd(),(drive_warn+str+"?").c_str(),"Warning",MB_YESNO)==IDNO) return;
 
 	if(type==DRIVE_CDROM) {
 		mediaid=0xF8;		/* Hard Disk */
@@ -417,7 +418,7 @@ void MenuMountDrive(char drive, const char drive2[DOS_PATHLENGTH]) {
 			default :   errmsg=MSG_Get("MSCDEX_UNKNOWN_ERROR");          break;
 		}
 		if (error) {
-			MessageBox(GetHWND(),errmsg.c_str(),error==5?"Warning":"Error",MB_OK);
+			MessageBox(xd_win_hwnd(),errmsg.c_str(),error==5?"Warning":"Error",MB_OK);
 			if (error!=5) {
 				delete newdrive;
 				return;
