@@ -30,7 +30,7 @@
 #include "timer.h"
 #include "inout.h"
 #include "shell.h"
-#include "../libs/display/display.h"
+#include "../libs/xplatform/xplatform.h"
 
 #if DOSBOXMENU_TYPE == DOSBOXMENU_SDLDRAW
 unsigned int min_sdldraw_menu_width = 500;

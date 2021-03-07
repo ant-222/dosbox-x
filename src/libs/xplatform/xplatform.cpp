@@ -1,5 +1,5 @@
 /* -------------- Cross platform access to display properties --------------- */
-#include "display.h"
+#include "xplatform.h"
 #include "SDL_syswm.h"
 
 #if defined(WIN32)

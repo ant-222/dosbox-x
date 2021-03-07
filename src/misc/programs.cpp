@@ -35,7 +35,7 @@
 #include "menu.h"
 #include "render.h"
 #include "../ints/int10.h"
-#include "../libs/display/display.h"
+#include "../libs/xplatform/xplatform.h"
 #if defined(WIN32)
 #include "windows.h"
 extern RECT monrect;

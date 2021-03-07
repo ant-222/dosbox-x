@@ -54,7 +54,7 @@
 #include "render.h"
 #include "mouse.h"
 #include "../ints/int10.h"
-#include "../libs/display/display.h"
+#include "../libs/xplatform/xplatform.h"
 #if !defined(HX_DOS)
 #include "../libs/tinyfiledialogs/tinyfiledialogs.c"
 #endif

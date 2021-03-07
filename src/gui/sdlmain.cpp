@@ -26,7 +26,7 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#include "../libs/display/display.h"
+#include "../libs/xplatform/xplatform.h"
 
 #ifdef WIN32
 # ifndef WIN32_LEAN_AND_MEAN

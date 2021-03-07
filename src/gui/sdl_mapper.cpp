@@ -47,7 +47,7 @@
 #include "SDL_syswm.h"
 #include "sdlmain.h"
 #include "shell.h"
-#include "../libs/display/display.h"
+#include "../libs/xplatform/xplatform.h"
 
 #if C_EMSCRIPTEN
 # include <emscripten.h>

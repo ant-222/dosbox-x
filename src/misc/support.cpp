@@ -34,7 +34,7 @@
 #include "video.h"
 #include "menu.h"
 #include "SDL.h"
-#include "../libs/display/display.h"
+#include "../libs/xplatform/xplatform.h"
 
 void upcase(std::string &str) {
 	int (*tf)(int) = std::toupper;

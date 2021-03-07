@@ -38,7 +38,7 @@
 #include "midi.h"
 #include "bios_disk.h"
 #include "../dos/drives.h"
-#include "../libs/display/display.h"
+#include "../libs/xplatform/xplatform.h"
 
 #include <iostream>
 #include <sstream>
