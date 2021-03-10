@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2020  The DOSBox Team
+ *  Copyright (C) 2002-2021  The DOSBox Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -118,9 +118,7 @@ static const char *def_menu_main[] =
     "--",
     "MainSendKey",
     "MainHostKey",
-#if defined(C_SDL2) || defined(WIN32) || defined(MACOSX) || defined(LINUX) && C_X11
     "SharedClipboard",
-#endif
     "--",
     "mapper_capmouse",
     "auto_lock_mouse",
@@ -190,19 +188,18 @@ static const char *def_menu_main_wheelarrow[] =
 /* main -> shared clipboard menu ("SharedClipboard") */
 static const char *def_menu_main_clipboard[] =
 {
-#if defined(WIN32) || defined(C_SDL2)
+#if defined(WIN32) || defined(MACOSX) || defined(C_SDL2)
     "mapper_fastedit",
     "clipboard_right",
     "clipboard_middle",
     "clipboard_arrows",
-#endif
-#if defined(WIN32)
     "--",
+#endif
     "clipboard_device",
     "clipboard_dosapi",
-#endif
-#if defined(WIN32) || defined(C_SDL2)
+    "clipboard_biospaste",
     "--",
+#if defined(WIN32) || defined(MACOSX) || defined(C_SDL2)
     "mapper_copyall",
 #endif
     "mapper_paste",
@@ -610,6 +607,7 @@ static const char *def_menu_capture[] =
     "mapper_savestate",
     "mapper_loadstate",
     "saveslotmenu",
+    "autosavecfg",
     "browsesavefile",
     "mapper_showstate",
     NULL
@@ -718,14 +716,15 @@ static const char *def_menu_help_debug[] =
 #endif
 #if !defined(MACOSX) && !defined(LINUX) && !defined(HX_DOS) && !defined(C_EMSCRIPTEN)
     "show_console",
-    "wait_on_error",
 #endif
 #if C_DEBUG
+    "save_logas",
     "--",
     "debug_blankrefreshtest",
     "debug_pageflip",
     "debug_retracepoll",
     "--",
+    "wait_on_error",
     "debug_logint21",
     "debug_logfileio",
 #endif
@@ -744,7 +743,7 @@ static const char *def_menu_help[] =
     "help_issue",
 #endif
     "--",
-#if C_NE2000
+#if C_PCAP
     "help_nic",
 #endif
 #if C_PRINTER && defined(WIN32)
@@ -753,7 +752,7 @@ static const char *def_menu_help[] =
 #if C_DEBUG || !defined(MACOSX) && !defined(LINUX) && !defined(HX_DOS) && !defined(C_EMSCRIPTEN)
     "HelpDebugMenu",
 #endif
-#if C_NE2000 || C_PRINTER && defined(WIN32) || C_DEBUG || !defined(MACOSX) && !defined(LINUX) && !defined(HX_DOS) && !defined(C_EMSCRIPTEN)
+#if C_PCAP || C_PRINTER && defined(WIN32) || C_DEBUG || !defined(MACOSX) && !defined(LINUX) && !defined(HX_DOS) && !defined(C_EMSCRIPTEN)
     "--",
 #endif
     "help_about",
